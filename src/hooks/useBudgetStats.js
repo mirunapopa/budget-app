@@ -41,7 +41,7 @@ export function useBudgetStats(transactions, budgets, type = 'Personal') {
 
       // Reasonable check: daily budget left within threshold of initial daily budget
       const deviation = dailyBudgetAtStart > 0
-        ? Math.abs(dailyBudgetLeft - dailyBudgetAtStart) / dailyBudgetAtStart
+        ? (dailyBudgetAtStart - dailyBudgetLeft) / dailyBudgetAtStart
         : 0;
       const isReasonable = monthlyBudget === 0 ? null : deviation <= threshold;
 
