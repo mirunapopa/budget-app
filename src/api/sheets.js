@@ -133,11 +133,13 @@ export async function fetchBudgets() {
     return budgets;
   };
 
+  const rawThreshold = thresholdRes.result.values?.[0]?.[0] || '0.2';
+  const parsedThreshold = parseFloat(rawThreshold.toString().replace('%',''));
+  const normalizedThreshold = parsedThreshold > 1 ? parsedThreshold / 100 : parsedThreshold;
+
   return {
     currentMonth: monthRes.result.values?.[0]?.[0] || '',
-    const rawVal = thresholdRes.result.values?.[0]?.[0] || '0.2';
-    const parsedThreshold = parseFloat(rawVal.toString().replace('%',''));
-    variabilityThreshold: parsedThreshold > 1 ? parsedThreshold / 100 : parsedThreshold,
+    variabilityThreshold: normalizedThreshold,
     personal: parsebudgetRows(personalRes.result.values),
     couple: parsebudgetRows(coupleRes.result.values),
   };
