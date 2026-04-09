@@ -1,10 +1,10 @@
 // ─── CONFIGURE THESE ────────────────────────────────────────────────────────
-export const SHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE';
-export const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_OAUTH_CLIENT_ID_HERE';
+export const SHEET_ID = '1r7wVyFqKWAu74AAXFscyoC-2xPD2xrfry5PzpATaGxg';
+export const GOOGLE_CLIENT_ID = '978452798350-7ht7go9ltpd5sna2nqmblj42dh6sk5k8.apps.googleusercontent.com';
 
 // Tab names — update if yours differ
 export const TABS = {
-  FORM_RESPONSES: 'Form responses',   // where transactions are appended
+  FORM_RESPONSES: 'Form responses 4',   // where transactions are appended
   INPUT_SECTION:  'Input section',    // where budgets are stored
   PERSONAL_SUMMARY: 'Personal Summary',
   COUPLE_SUMMARY:   'Couple Summary',

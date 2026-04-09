@@ -135,8 +135,9 @@ export async function appendTransaction({ category, description, amount, type })
 
   await window.gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: `${TABS.FORM_RESPONSES}!A:H`,
+    range: `${TABS.FORM_RESPONSES}!A1`,
     valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
     resource: { values: [row] },
   });
 
