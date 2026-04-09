@@ -135,7 +135,9 @@ export async function fetchBudgets() {
 
   return {
     currentMonth: monthRes.result.values?.[0]?.[0] || '',
-    variabilityThreshold: parseFloat(thresholdRes.result.values?.[0]?.[0]) || 0.20,
+    const rawVal = thresholdRes.result.values?.[0]?.[0] || '0.2';
+    const parsedThreshold = parseFloat(rawVal.toString().replace('%',''));
+    variabilityThreshold: parsedThreshold > 1 ? parsedThreshold / 100 : parsedThreshold,
     personal: parsebudgetRows(personalRes.result.values),
     couple: parsebudgetRows(coupleRes.result.values),
   };
@@ -183,9 +185,8 @@ export async function appendTransaction({ category, description, amount, type })
 
   await window.gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: `${TABS.FORM_RESPONSES}!A1`,
+    range: `${TABS.FORM_RESPONSES}!A:H`,
     valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
     resource: { values: [row] },
   });
 

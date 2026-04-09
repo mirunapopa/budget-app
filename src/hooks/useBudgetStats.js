@@ -14,7 +14,8 @@ export function useBudgetStats(transactions, budgets, type = 'Personal') {
     const daysRemaining = daysInMonth - dayOfMonth + 1;
 
     const budgetMap = type === 'Personal' ? budgets.personal : budgets.couple;
-    const threshold = budgets.variabilityThreshold || 0.20;
+    const rawThreshold = budgets.variabilityThreshold || 0.20;
+    const threshold = rawThreshold > 1 ? rawThreshold / 100 : rawThreshold;
 
     // Filter to current month + type
     const monthTx = transactions.filter(tx => {
