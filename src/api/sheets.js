@@ -41,21 +41,68 @@ export async function initGoogleAPI() {
   }
 }
 
+const TOKEN_KEY = 'budget_gapi_token';
+
+function saveToken(tokenResp) {
+  const expiry = Date.now() + (tokenResp.expires_in - 60) * 1000; // 1 min buffer
+  localStorage.setItem(TOKEN_KEY, JSON.stringify({
+    access_token: tokenResp.access_token,
+    expiry,
+  }));
+}
+
+function loadToken() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(TOKEN_KEY));
+    if (stored && stored.expiry > Date.now()) return stored;
+  } catch {}
+  return null;
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
 export function isSignedIn() {
-  return !!window.gapi?.client?.getToken();
+  // Check live token first
+  const live = window.gapi?.client?.getToken();
+  if (live) return true;
+  // Try restoring from storage
+  const stored = loadToken();
+  if (stored) {
+    window.gapi.client.setToken({ access_token: stored.access_token });
+    return true;
+  }
+  return false;
 }
 
 export async function signIn() {
   return new Promise((resolve, reject) => {
     tokenClient.callback = (resp) => {
-      if (resp.error) reject(resp);
-      else resolve(resp);
+      if (resp.error) { reject(resp); return; }
+      saveToken(resp);
+      resolve(resp);
     };
-    if (window.gapi.client.getToken() === null) {
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-      tokenClient.requestAccessToken({ prompt: '' });
-    }
+    // No prompt = silent refresh if Google still has a session
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+export async function trySilentSignIn() {
+  // First try restoring from localStorage
+  const stored = loadToken();
+  if (stored) {
+    window.gapi.client.setToken({ access_token: stored.access_token });
+    return true;
+  }
+  // Then try silent OAuth (works if user has active Google session)
+  return new Promise((resolve) => {
+    tokenClient.callback = (resp) => {
+      if (resp.error) { resolve(false); return; }
+      saveToken(resp);
+      resolve(true);
+    };
+    tokenClient.requestAccessToken({ prompt: 'none' });
   });
 }
 
@@ -65,6 +112,7 @@ export function signOut() {
     window.google.accounts.oauth2.revoke(token.access_token);
     window.gapi.client.setToken('');
   }
+  clearToken();
 }
 
 // ─── Read budgets from Input Section ─────────────────────────────────────────
@@ -135,9 +183,8 @@ export async function appendTransaction({ category, description, amount, type })
 
   await window.gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: `${TABS.FORM_RESPONSES}!A1`,
+    range: `${TABS.FORM_RESPONSES}!A:H`,
     valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
     resource: { values: [row] },
   });
 
