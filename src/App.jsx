@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { initGoogleAPI, isSignedIn, signIn, signOut, fetchBudgets, fetchTransactions, appendTransaction } from './api/sheets.js';
+import { initGoogleAPI, isSignedIn, signIn, signOut, trySilentSignIn, fetchBudgets, fetchTransactions, appendTransaction } from './api/sheets.js';
 import { useBudgetStats } from './hooks/useBudgetStats.js';
 import { CATEGORIES, TYPES } from './config.js';
 
-// ─── Icons (inline SVG) ───────────────────────────────────────────────────────
 const PlusIcon = () => (
   <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
     <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
@@ -14,9 +13,9 @@ const ChartIcon = () => (
     <rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>
   </svg>
 );
-const TodayIcon = () => (
+const HomeIcon = () => (
   <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-    <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round"/>
+    <path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const LogoutIcon = () => (
@@ -25,7 +24,6 @@ const LogoutIcon = () => (
   </svg>
 );
 
-// ─── Category colors ──────────────────────────────────────────────────────────
 const CAT_COLORS = {
   Groceries: '#4ade80',
   Outings:   '#fb923c',
@@ -34,7 +32,11 @@ const CAT_COLORS = {
   Travel:    '#f472b6',
 };
 
-// ─── Component: Quick Add ─────────────────────────────────────────────────────
+function Badge({ ok }) {
+  if (ok === null) return <span className="badge neutral">–</span>;
+  return <span className={`badge ${ok ? 'yes' : 'no'}`}>{ok ? 'on track' : 'slow down'}</span>;
+}
+
 function QuickAdd({ onAdd, loading }) {
   const [type, setType] = useState('Personal');
   const [category, setCategory] = useState('');
@@ -56,22 +58,14 @@ function QuickAdd({ onAdd, loading }) {
 
   return (
     <div className="quick-add">
-      {submitted && <div className="toast">✓ Added!</div>}
-
-      {/* Type toggle */}
+      {submitted && <div className="toast">Added!</div>}
       <div className="type-toggle">
         {TYPES.map(t => (
-          <button
-            key={t}
-            className={`type-btn ${type === t ? 'active' : ''}`}
-            onClick={() => setType(t)}
-          >
+          <button key={t} className={`type-btn ${type === t ? 'active' : ''}`} onClick={() => setType(t)}>
             {t === 'Personal' ? '👤' : '👥'} {t}
           </button>
         ))}
       </div>
-
-      {/* Category chips */}
       <div className="section-label">Category</div>
       <div className="cat-grid">
         {CATEGORIES.map(cat => (
@@ -85,8 +79,6 @@ function QuickAdd({ onAdd, loading }) {
           </button>
         ))}
       </div>
-
-      {/* Amount */}
       <div className="section-label">Amount (€)</div>
       <input
         className="amount-input"
@@ -97,8 +89,6 @@ function QuickAdd({ onAdd, loading }) {
         onChange={e => setAmount(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
       />
-
-      {/* Description */}
       <div className="section-label">Description <span className="optional">(optional)</span></div>
       <input
         className="desc-input"
@@ -108,7 +98,6 @@ function QuickAdd({ onAdd, loading }) {
         onChange={e => setDescription(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
       />
-
       <button
         className={`submit-btn ${canSubmit ? 'ready' : ''} ${loading ? 'loading' : ''}`}
         onClick={handleSubmit}
@@ -120,68 +109,101 @@ function QuickAdd({ onAdd, loading }) {
   );
 }
 
-// ─── Component: Reasonability Badge ──────────────────────────────────────────
-function Badge({ ok }) {
-  if (ok === null) return <span className="badge neutral">–</span>;
-  return <span className={`badge ${ok ? 'yes' : 'no'}`}>{ok ? 'yes' : 'no'}</span>;
-}
-
-// ─── Component: Today View ────────────────────────────────────────────────────
-function TodayView({ stats, type }) {
+function HomeView({ stats }) {
   if (!stats) return <div className="loading-state">Loading...</div>;
 
   const { todayTotal, todayTx, overallReasonable, categoryStats } = stats;
 
-  // Only categories with today's spend
-  const todayByCategory = {};
-  todayTx.forEach(tx => {
-    todayByCategory[tx.category] = (todayByCategory[tx.category] || 0) + tx.amount;
-  });
+  const totalDailyBudget = categoryStats
+    .filter(c => c.monthlyBudget > 0)
+    .reduce((s, c) => s + c.dailyBudgetLeft, 0);
+
+  const remaining = totalDailyBudget - todayTotal;
+  const canStillSpend = Math.max(0, remaining);
+  const isOver = remaining < 0;
 
   return (
     <div className="today-view">
       {/* Hero */}
-      <div className="today-hero">
-        <div className="today-amount">-€{todayTotal.toFixed(2)}</div>
-        <div className="today-label">my spend for today</div>
-        <div className="today-flags">
-          <div className="flag-item">
-            <span className="flag-q">is this reasonable?</span>
-            <Badge ok={overallReasonable} />
-          </div>
+      <div className={`today-hero ${isOver ? 'hero-over' : ''}`}>
+        <div className="hero-label">
+          {isOver ? 'over budget today' : 'you can still spend today'}
+        </div>
+        <div className={`hero-amount ${isOver ? 'over' : ''}`}>
+          {isOver ? '-' : ''}€{isOver ? Math.abs(remaining).toFixed(2) : canStillSpend.toFixed(2)}
+        </div>
+        <div className="hero-meta">
+          <span className="hero-meta-item">
+            <span className="hero-meta-label">daily budget</span>
+            <span className="hero-meta-value">€{totalDailyBudget.toFixed(2)}</span>
+          </span>
+          <span className="hero-divider">·</span>
+          <span className="hero-meta-item">
+            <span className="hero-meta-label">spent today</span>
+            <span className="hero-meta-value">€{todayTotal.toFixed(2)}</span>
+          </span>
+          <span className="hero-divider">·</span>
+          <Badge ok={overallReasonable} />
         </div>
       </div>
 
-      {/* Today breakdown */}
+      {/* Per-category */}
+      <div className="card">
+        <div className="card-title">daily budget left per category</div>
+        {categoryStats.filter(c => c.monthlyBudget > 0).map(c => {
+          const spentTodayInCat = todayTx
+            .filter(tx => tx.category === c.category)
+            .reduce((s, tx) => s + tx.amount, 0);
+          const remainingToday = c.dailyBudgetLeft - spentTodayInCat;
+          const isOverCat = remainingToday < 0;
+          const pct = c.dailyBudgetLeft > 0
+            ? Math.min((spentTodayInCat / c.dailyBudgetLeft) * 100, 100)
+            : 0;
+          return (
+            <div key={c.category} className="home-cat-row">
+              <div className="home-cat-top">
+                <span className="home-cat-name" style={{ color: CAT_COLORS[c.category] }}>{c.category}</span>
+                <div className="home-cat-right">
+                  <span className={`home-cat-remaining ${isOverCat ? 'over-text' : ''}`}>
+                    {isOverCat ? `−€${Math.abs(remainingToday).toFixed(2)} over` : `€${remainingToday.toFixed(2)} left`}
+                  </span>
+                  <Badge ok={c.isReasonable} />
+                </div>
+              </div>
+              <div className="progress-bar-wrap">
+                <div
+                  className={`progress-bar-fill ${isOverCat || c.isReasonable === false ? 'over' : ''}`}
+                  style={{ width: `${pct}%`, background: isOverCat ? 'var(--danger)' : CAT_COLORS[c.category] }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {todayTx.length > 0 && (
         <div className="card">
-          <div className="card-title">Today's transactions</div>
+          <div className="card-title">logged today</div>
           {todayTx.map((tx, i) => (
             <div key={i} className="tx-row">
               <span className="tx-cat" style={{ color: CAT_COLORS[tx.category] }}>{tx.category}</span>
               <span className="tx-desc">{tx.description || '—'}</span>
-              <span className="tx-amount">€{tx.amount.toFixed(2)}</span>
+              <span className="tx-amount">-€{tx.amount.toFixed(2)}</span>
             </div>
           ))}
         </div>
       )}
-
-      {todayTx.length === 0 && (
-        <div className="empty-state">No expenses logged today 🎉</div>
-      )}
+      {todayTx.length === 0 && <div className="empty-state">Nothing logged yet today</div>}
     </div>
   );
 }
 
-// ─── Component: Month View ────────────────────────────────────────────────────
-function MonthView({ stats, type }) {
+function MonthView({ stats }) {
   if (!stats) return <div className="loading-state">Loading...</div>;
-
   const { categoryStats, totalMonthly, totalSpent, daysRemaining, dayOfMonth, daysInMonth } = stats;
 
   return (
     <div className="month-view">
-      {/* Overall */}
       <div className="card overall-card">
         <div className="overall-row">
           <div>
@@ -194,14 +216,9 @@ function MonthView({ stats, type }) {
           </div>
         </div>
         <div className="progress-bar-wrap">
-          <div
-            className="progress-bar-fill overall"
-            style={{ width: `${Math.min((totalSpent/totalMonthly)*100, 100)}%` }}
-          />
+          <div className="progress-bar-fill overall" style={{ width: `${Math.min((totalSpent/totalMonthly)*100, 100)}%` }} />
         </div>
       </div>
-
-      {/* Per category */}
       <div className="cat-list">
         {categoryStats.map(c => (
           <div key={c.category} className="cat-card">
@@ -216,10 +233,7 @@ function MonthView({ stats, type }) {
             <div className="progress-bar-wrap">
               <div
                 className={`progress-bar-fill ${c.isReasonable === false ? 'over' : ''}`}
-                style={{
-                  width: `${Math.min(c.percentUsed * 100, 100)}%`,
-                  background: CAT_COLORS[c.category],
-                }}
+                style={{ width: `${Math.min(c.percentUsed * 100, 100)}%`, background: CAT_COLORS[c.category] }}
               />
             </div>
             <div className="cat-card-bot">
@@ -233,11 +247,10 @@ function MonthView({ stats, type }) {
   );
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [apiReady, setApiReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [tab, setTab] = useState('add');
+  const [tab, setTab] = useState('home');
   const [type, setType] = useState('Personal');
   const [transactions, setTransactions] = useState(null);
   const [budgets, setBudgets] = useState(null);
@@ -245,14 +258,18 @@ export default function App() {
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Init Google API
   useEffect(() => {
     initGoogleAPI()
-      .then(() => {
+      .then(async () => {
         setApiReady(true);
-        setSignedIn(isSignedIn());
+        if (isSignedIn()) {
+          setSignedIn(true);
+        } else {
+          const ok = await trySilentSignIn();
+          setSignedIn(ok);
+        }
       })
-      .catch(e => setError('Failed to load Google API. Check your Client ID.'));
+      .catch(() => setError('Failed to load Google API. Check your Client ID.'));
   }, []);
 
   const loadData = useCallback(async () => {
@@ -292,7 +309,8 @@ export default function App() {
     setAddLoading(true);
     try {
       await appendTransaction(data);
-      await loadData(); // refresh
+      await loadData();
+      setTab('home');
     } catch (e) {
       setError('Failed to save: ' + e.message);
     } finally {
@@ -302,46 +320,35 @@ export default function App() {
 
   const stats = useBudgetStats(transactions, budgets, type);
 
-  // ── Render: not ready ──
   if (!apiReady) {
     return (
       <div className="splash">
-        <div className="splash-logo">💸</div>
+        <div className="splash-logo">$</div>
         <div className="splash-text">Loading...</div>
       </div>
     );
   }
 
-  // ── Render: sign in ──
   if (!signedIn) {
     return (
       <div className="splash">
-        <div className="splash-logo">💸</div>
+        <div className="splash-logo">$</div>
         <h1 className="splash-title">Budget</h1>
         <p className="splash-sub">Your spending, actually under control.</p>
         {error && <div className="error-msg">{error}</div>}
-        <button className="signin-btn" onClick={handleSignIn}>
-          Sign in with Google
-        </button>
+        <button className="signin-btn" onClick={handleSignIn}>Sign in with Google</button>
       </div>
     );
   }
 
-  // ── Render: main app ──
   return (
     <div className="app">
-      {/* Header */}
       <header className="app-header">
-        <span className="header-title">💸 Budget</span>
+        <span className="header-title">Budget</span>
         <div className="header-right">
-          {/* Type switcher */}
           <div className="type-mini-toggle">
             {TYPES.map(t => (
-              <button
-                key={t}
-                className={`type-mini-btn ${type === t ? 'active' : ''}`}
-                onClick={() => setType(t)}
-              >
+              <button key={t} className={`type-mini-btn ${type === t ? 'active' : ''}`} onClick={() => setType(t)}>
                 {t === 'Personal' ? '👤' : '👥'}
               </button>
             ))}
@@ -352,21 +359,19 @@ export default function App() {
 
       {error && <div className="error-banner" onClick={() => setError(null)}>{error} ✕</div>}
 
-      {/* Content */}
       <main className="app-main">
         {dataLoading && <div className="refresh-bar">Syncing...</div>}
+        {tab === 'home'  && <HomeView stats={stats} type={type} />}
         {tab === 'add'   && <QuickAdd onAdd={handleAdd} loading={addLoading} />}
-        {tab === 'today' && <TodayView stats={stats} type={type} />}
         {tab === 'month' && <MonthView stats={stats} type={type} />}
       </main>
 
-      {/* Bottom nav */}
       <nav className="bottom-nav">
+        <button className={`nav-btn ${tab === 'home' ? 'active' : ''}`} onClick={() => setTab('home')}>
+          <HomeIcon /><span>Today</span>
+        </button>
         <button className={`nav-btn ${tab === 'add' ? 'active' : ''}`} onClick={() => setTab('add')}>
           <PlusIcon /><span>Add</span>
-        </button>
-        <button className={`nav-btn ${tab === 'today' ? 'active' : ''}`} onClick={() => setTab('today')}>
-          <TodayIcon /><span>Today</span>
         </button>
         <button className={`nav-btn ${tab === 'month' ? 'active' : ''}`} onClick={() => setTab('month')}>
           <ChartIcon /><span>Month</span>

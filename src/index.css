@@ -281,43 +281,69 @@ body {
 .badge.no      { background: rgba(248,113,113,0.15); color: #f87171; }
 .badge.neutral { background: var(--surface2); color: var(--text-muted); }
 
-/* ─── Today view ─────────────────────────────────────────────────────────────── */
+/* ─── Home hero ──────────────────────────────────────────────────────────────── */
 .today-hero {
   background: var(--surface);
   border-radius: 20px;
-  padding: 28px 24px;
+  padding: 32px 24px;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   border: 1px solid var(--border);
 }
 
-.today-amount {
-  font-family: var(--mono);
-  font-size: 48px;
-  font-weight: 500;
-  letter-spacing: -2px;
-  margin-bottom: 4px;
+.today-hero.hero-over {
+  border-color: var(--danger);
+  background: rgba(248,113,113,0.05);
 }
 
-.today-label {
+.hero-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.hero-amount {
+  font-family: var(--mono);
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -3px;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.hero-over .hero-amount { color: var(--danger); }
+
+.hero-sub {
   font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 16px;
-}
-
-.today-flags {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-}
-
-.flag-item {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--text-muted);
 }
+
+/* ─── Home category rows ─────────────────────────────────────────────────────── */
+.home-cat-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.home-cat-row:last-child { border-bottom: none; }
+
+.home-cat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.home-cat-name { font-weight: 600; font-size: 13px; }
+.home-cat-remaining { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
+
+
 
 /* ─── Cards ───────────────────────────────────────────────────────────────────── */
 .card {
@@ -496,3 +522,70 @@ body {
   font-size: 13px;
   margin-top: 8px;
 }
+
+/* ─── Hero overrides (updated) ───────────────────────────────────────────────── */
+.app-header {
+  padding-top: max(14px, env(safe-area-inset-top)) !important;
+}
+
+.today-hero {
+  padding: 28px 24px 24px !important;
+}
+
+.hero-label {
+  font-size: 11px !important;
+  letter-spacing: 1.2px !important;
+  margin-bottom: 8px !important;
+}
+
+.hero-amount {
+  font-size: 72px !important;
+  letter-spacing: -4px !important;
+  margin-bottom: 16px !important;
+}
+
+.hero-amount.over { color: var(--danger) !important; }
+
+.hero-sub { display: none !important; }
+
+.hero-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hero-meta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hero-meta-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+.hero-meta-value {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.hero-divider { color: var(--border); font-size: 18px; }
+
+.home-cat-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-cat-remaining.over-text { color: var(--danger); }
+
+.badge.yes { background: rgba(74,222,128,0.15); color: #4ade80; }
+.badge.no  { background: rgba(248,113,113,0.15); color: #f87171; }
