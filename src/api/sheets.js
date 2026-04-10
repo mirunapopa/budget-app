@@ -189,6 +189,7 @@ export async function appendTransaction({ category, description, amount, type })
     spreadsheetId: SHEET_ID,
     range: `${TABS.FORM_RESPONSES}!A:H`,
     valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
     resource: { values: [row] },
   });
 

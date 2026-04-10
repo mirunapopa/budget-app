@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { initGoogleAPI, isSignedIn, signIn, signOut, trySilentSignIn, fetchBudgets, fetchTransactions, appendTransaction } from './api/sheets.js';
 import { useBudgetStats } from './hooks/useBudgetStats.js';
 import { CATEGORIES, TYPES } from './config.js';
+import BudgetEditor from './BudgetEditor.jsx';
+
+const BudgetsIcon = () => (
+  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <rect x="2" y="6" width="20" height="14" rx="2" />
+    <path d="M2 10h20" />
+    <circle cx="16" cy="14" r="1.5" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 const PlusIcon = () => (
   <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -338,9 +347,10 @@ export default function App() {
 
       <main className="app-main">
         {dataLoading && <div className="refresh-bar">Syncing...</div>}
-        {tab === 'home'  && <HomeView stats={stats} type={type} />}
-        {tab === 'add'   && <QuickAdd onAdd={handleAdd} loading={addLoading} />}
-        {tab === 'month' && <MonthView stats={stats} type={type} />}
+        {tab === 'home'    && <HomeView stats={stats} type={type} />}
+        {tab === 'add'     && <QuickAdd onAdd={handleAdd} loading={addLoading} />}
+        {tab === 'month'   && <MonthView stats={stats} type={type} />}
+        {tab === 'budgets' && <BudgetEditor budgets={budgets} onSave={setBudgets} />}
       </main>
 
       <nav className="bottom-nav">
@@ -352,6 +362,9 @@ export default function App() {
         </button>
         <button className={`nav-btn ${tab === 'month' ? 'active' : ''}`} onClick={() => setTab('month')}>
           <ChartIcon /><span>Month</span>
+        </button>
+        <button className={`nav-btn ${tab === 'budgets' ? 'active' : ''}`} onClick={() => setTab('budgets')}>
+          <BudgetsIcon /><span>Budgets</span>
         </button>
       </nav>
     </div>
