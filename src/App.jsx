@@ -199,9 +199,25 @@ function MonthView({ stats }) {
   const { categoryStats, totalMonthly, totalSpent, daysRemaining, dayOfMonth, daysInMonth } = stats;
   const totalLeft = totalMonthly - totalSpent;
 
+  // Daily budget at month start vs now
+  const totalDailyAtStart = totalMonthly / daysInMonth;
+  const totalDailyNow = daysRemaining > 0 ? totalLeft / daysRemaining : 0;
+  const dailyDrift = totalDailyNow - totalDailyAtStart;
+  const dailyDriftPct = totalDailyAtStart > 0 ? (dailyDrift / totalDailyAtStart) * 100 : 0;
+
+  // No-spend nudge: how many no-spend days needed to get daily back to original
+  // If you do N no-spend days, remaining budget is spread over (daysRemaining - N) days
+  // Target: totalLeft / (daysRemaining - N) = totalDailyAtStart
+  // N = daysRemaining - totalLeft / totalDailyAtStart
+  const noSpendDaysNeeded = totalDailyAtStart > 0
+    ? Math.max(0, Math.ceil(daysRemaining - totalLeft / totalDailyAtStart))
+    : 0;
+  const isAhead = dailyDrift >= 0;
+  const needsRecovery = !isAhead && noSpendDaysNeeded > 0;
+
   return (
     <div className="month-view">
-      {/* Overall: how much is LEFT, not spent */}
+      {/* Overall card */}
       <div className="card overall-card">
         <div className="overall-row">
           <div>
@@ -219,15 +235,83 @@ function MonthView({ stats }) {
         </div>
         <div className="progress-bar-wrap">
           <div className="progress-bar-fill overall"
-            style={{ width: `${Math.min((totalSpent/totalMonthly)*100, 100)}%` }} />
+            style={{ width: `${Math.min((totalSpent / totalMonthly) * 100, 100)}%` }} />
         </div>
       </div>
 
-      {/* Per category: budget left as main number */}
+      {/* Daily budget summary */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-title">daily budget</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 500, color: isAhead ? 'var(--accent)' : 'var(--danger)' }}>
+              €{Math.max(0, totalDailyNow).toFixed(2)}<span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>/day</span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              started at €{totalDailyAtStart.toFixed(2)}/day
+            </div>
+          </div>
+          <div style={{
+            padding: '4px 12px', borderRadius: 100, fontSize: 12, fontWeight: 600, fontFamily: 'var(--mono)',
+            background: isAhead ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
+            color: isAhead ? 'var(--accent)' : 'var(--danger)',
+          }}>
+            {isAhead ? '+' : ''}{dailyDriftPct.toFixed(0)}% vs start
+          </div>
+        </div>
+
+        {/* Where you should be vs where you are */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: needsRecovery ? 14 : 0 }}>
+          <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>should have spent</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 500 }}>
+              €{Math.min((totalDailyAtStart * dayOfMonth), totalMonthly).toFixed(2)}
+            </div>
+          </div>
+          <div style={{ flex: 1, background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 4 }}>actually spent</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 500, color: totalSpent > totalDailyAtStart * dayOfMonth ? 'var(--danger)' : 'var(--accent)' }}>
+              €{totalSpent.toFixed(2)}
+            </div>
+          </div>
+        </div>
+
+        {/* No-spend nudge */}
+        {needsRecovery && (
+          <div style={{
+            background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
+            borderRadius: 10, padding: '12px 14px',
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--danger)', marginBottom: 4 }}>
+              to get back on track
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              {noSpendDaysNeeded === 1
+                ? <>1 no-spend day would bring your daily back to <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>€{totalDailyAtStart.toFixed(2)}</span>.</>
+                : <>{noSpendDaysNeeded} no-spend days over the next {daysRemaining}d would bring your daily back to <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>€{totalDailyAtStart.toFixed(2)}</span>.</>
+              }
+            </div>
+          </div>
+        )}
+        {isAhead && (
+          <div style={{
+            background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)',
+            borderRadius: 10, padding: '12px 14px',
+          }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              You have <span style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>€{(totalDailyNow - totalDailyAtStart).toFixed(2)}/day</span> extra headroom compared to your original budget.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Per category */}
       <div className="cat-list">
         {categoryStats.map(c => {
           const left = c.budgetLeft;
           const isOver = left < 0;
+          const catDailyDrift = c.dailyBudgetLeft - c.dailyBudgetAtStart;
+          const catDriftPct = c.dailyBudgetAtStart > 0 ? (catDailyDrift / c.dailyBudgetAtStart) * 100 : 0;
           return (
             <div key={c.category} className="cat-card">
               <div className="cat-card-top">
@@ -249,7 +333,14 @@ function MonthView({ stats }) {
                 />
               </div>
               <div className="cat-card-bot">
-                <span>€{c.dailyBudgetLeft.toFixed(2)}/day for {daysRemaining}d</span>
+                <span style={{ color: c.isReasonable === false ? 'var(--danger)' : 'var(--text-muted)' }}>
+                  €{c.dailyBudgetLeft.toFixed(2)}/day
+                  {c.monthlyBudget > 0 && (
+                    <span style={{ marginLeft: 4, color: catDriftPct <= 0 ? 'var(--danger)' : 'var(--accent)' }}>
+                      ({catDriftPct > 0 ? '+' : ''}{catDriftPct.toFixed(0)}%)
+                    </span>
+                  )}
+                </span>
                 <span>{(c.percentUsed * 100).toFixed(0)}% used</span>
               </div>
             </div>
