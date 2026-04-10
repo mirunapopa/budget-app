@@ -194,6 +194,71 @@ function HomeView({ stats }) {
   );
 }
 
+function CollapsibleCatList({ categoryStats, daysRemaining }) {
+  const [expanded, setExpanded] = useState(null);
+  return (
+    <div className="cat-list">
+      {categoryStats.map(c => {
+        const left = c.budgetLeft;
+        const isOver = left < 0;
+        const isOpen = expanded === c.category;
+        const catDailyDrift = c.dailyBudgetLeft - c.dailyBudgetAtStart;
+        const catDriftPct = c.dailyBudgetAtStart > 0 ? (catDailyDrift / c.dailyBudgetAtStart) * 100 : 0;
+        return (
+          <div
+            key={c.category}
+            className="cat-card"
+            onClick={() => setExpanded(isOpen ? null : c.category)}
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span className="cat-name" style={{ color: CAT_COLORS[c.category] }}>{c.category}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 15, color: isOver ? 'var(--danger)' : 'var(--text)' }}>
+                  {isOver ? '-' : ''}€{Math.abs(left).toFixed(2)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Badge ok={c.isReasonable} />
+                <span style={{ color: 'var(--text-muted)', fontSize: 12, display: 'inline-block', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+              </div>
+            </div>
+            {isOpen && (
+              <div style={{ marginTop: 12 }} onClick={e => e.stopPropagation()}>
+                <div className="cat-card-mid">
+                  <span className="cat-spent" style={{ color: isOver ? 'var(--danger)' : 'var(--text)' }}>
+                    {isOver ? '-' : ''}€{Math.abs(left).toFixed(2)}
+                  </span>
+                  <span className="cat-budget">
+                    {isOver ? ' over' : ' left'} · €{c.monthlyBudget.toFixed(2)} budget
+                  </span>
+                </div>
+                <div className="progress-bar-wrap" style={{ marginBottom: 8 }}>
+                  <div
+                    className={`progress-bar-fill ${isOver || c.isReasonable === false ? 'over' : ''}`}
+                    style={{ width: `${Math.min(c.percentUsed * 100, 100)}%`, background: isOver ? 'var(--danger)' : CAT_COLORS[c.category] }}
+                  />
+                </div>
+                <div className="cat-card-bot">
+                  <span style={{ color: c.isReasonable === false ? 'var(--danger)' : 'var(--text-muted)' }}>
+                    €{c.dailyBudgetLeft.toFixed(2)}/day
+                    {c.monthlyBudget > 0 && (
+                      <span style={{ marginLeft: 4, color: catDriftPct <= 0 ? 'var(--danger)' : 'var(--accent)' }}>
+                        ({catDriftPct > 0 ? '+' : ''}{catDriftPct.toFixed(0)}%)
+                      </span>
+                    )}
+                  </span>
+                  <span>{(c.percentUsed * 100).toFixed(0)}% used</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MonthView({ stats }) {
   if (!stats) return <div className="loading-state">Loading...</div>;
   const { categoryStats, totalMonthly, totalSpent, daysRemaining, dayOfMonth, daysInMonth } = stats;
@@ -305,48 +370,8 @@ function MonthView({ stats }) {
         )}
       </div>
 
-      {/* Per category */}
-      <div className="cat-list">
-        {categoryStats.map(c => {
-          const left = c.budgetLeft;
-          const isOver = left < 0;
-          const catDailyDrift = c.dailyBudgetLeft - c.dailyBudgetAtStart;
-          const catDriftPct = c.dailyBudgetAtStart > 0 ? (catDailyDrift / c.dailyBudgetAtStart) * 100 : 0;
-          return (
-            <div key={c.category} className="cat-card">
-              <div className="cat-card-top">
-                <span className="cat-name" style={{ color: CAT_COLORS[c.category] }}>{c.category}</span>
-                <Badge ok={c.isReasonable} />
-              </div>
-              <div className="cat-card-mid">
-                <span className="cat-spent" style={{ color: isOver ? 'var(--danger)' : 'var(--text)' }}>
-                  {isOver ? '-' : ''}€{Math.abs(left).toFixed(2)}
-                </span>
-                <span className="cat-budget">
-                  {isOver ? ' over' : ' left'} · €{c.monthlyBudget.toFixed(2)} budget
-                </span>
-              </div>
-              <div className="progress-bar-wrap">
-                <div
-                  className={`progress-bar-fill ${isOver || c.isReasonable === false ? 'over' : ''}`}
-                  style={{ width: `${Math.min(c.percentUsed * 100, 100)}%`, background: isOver ? 'var(--danger)' : CAT_COLORS[c.category] }}
-                />
-              </div>
-              <div className="cat-card-bot">
-                <span style={{ color: c.isReasonable === false ? 'var(--danger)' : 'var(--text-muted)' }}>
-                  €{c.dailyBudgetLeft.toFixed(2)}/day
-                  {c.monthlyBudget > 0 && (
-                    <span style={{ marginLeft: 4, color: catDriftPct <= 0 ? 'var(--danger)' : 'var(--accent)' }}>
-                      ({catDriftPct > 0 ? '+' : ''}{catDriftPct.toFixed(0)}%)
-                    </span>
-                  )}
-                </span>
-                <span>{(c.percentUsed * 100).toFixed(0)}% used</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Per category — collapsible */}
+      <CollapsibleCatList categoryStats={categoryStats} daysRemaining={daysRemaining} />
     </div>
   );
 }
