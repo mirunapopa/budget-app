@@ -196,6 +196,28 @@ export async function appendTransaction({ category, description, amount, type })
   return row;
 }
 
+// ─── Write budgets back to Input Section ─────────────────────────────────────
+
+export async function updateBudgets(budgets) {
+  const toRows = (budgetObj) =>
+    Object.entries(budgetObj).map(([cat, val]) => [cat, val]);
+
+  await Promise.all([
+    window.gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: INPUT_RANGES.PERSONAL_BUDGETS,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: toRows(budgets.personal) },
+    }),
+    window.gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: INPUT_RANGES.COUPLE_BUDGETS,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: toRows(budgets.couple) },
+    }),
+  ]);
+}
+
 function getISOWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;

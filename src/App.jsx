@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { initGoogleAPI, isSignedIn, signIn, signOut, trySilentSignIn, fetchBudgets, fetchTransactions, appendTransaction } from './api/sheets.js';
+import { initGoogleAPI, isSignedIn, signIn, signOut, trySilentSignIn, fetchBudgets, fetchTransactions, appendTransaction, updateBudgets } from './api/sheets.js';
 import { useBudgetStats } from './hooks/useBudgetStats.js';
 import { CATEGORIES, TYPES } from './config.js';
 import BudgetEditor from './BudgetEditor.jsx';
@@ -466,7 +466,15 @@ export default function App() {
         {tab === 'home'    && <HomeView stats={stats} type={type} />}
         {tab === 'add'     && <QuickAdd onAdd={handleAdd} loading={addLoading} />}
         {tab === 'month'   && <MonthView stats={stats} type={type} />}
-        {tab === 'budgets' && <BudgetEditor budgets={budgets} onSave={setBudgets} />}
+        {tab === 'budgets' && (
+          <BudgetEditor
+            budgets={budgets}
+            onSave={async (updated) => {
+              await updateBudgets(updated);
+              setBudgets(updated);
+            }}
+          />
+        )}
       </main>
 
       <nav className="bottom-nav">
