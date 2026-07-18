@@ -40,6 +40,34 @@ function sliderBg(color, pct) {
   return `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #1e1e1e ${pct}%, #1e1e1e 100%)`;
 }
 
+// Controlled number input whose displayed text only re-syncs from the
+// (rounded, derived) `value` prop while the field isn't focused. This lets
+// the user freely type, clear, or enter decimals without every keystroke
+// being immediately overwritten by the recomputed/rounded value.
+function NumberField({ value, format, onCommit, style, ...rest }) {
+  const [draft, setDraft] = useState(() => format(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(format(value));
+  }, [value, focused, format]);
+
+  return (
+    <input
+      {...rest}
+      style={style}
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onFocus={e => { setFocused(true); e.target.select(); }}
+      onBlur={() => {
+        setFocused(false);
+        if (draft !== format(value)) onCommit(draft);
+      }}
+      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+    />
+  );
+}
+
 export default function BudgetEditor({ budgets: externalBudgets, onSave }) {
   const [currentType, setCurrentType] = useState('personal');
   const [localBudgets, setLocalBudgets] = useState(() => externalBudgets || DEFAULT_BUDGETS);
@@ -203,13 +231,13 @@ export default function BudgetEditor({ budgets: externalBudgets, onSave }) {
         <div style={s.cardLabel}>total monthly budget</div>
         <div style={s.totalRow}>
           <span style={s.totalEuro}>€</span>
-          <input
+          <NumberField
             style={s.totalInput}
             type="number"
             step="1"
-            value={total.toFixed(2)}
-            onChange={e => onTotalChange(e.target.value)}
-            onFocus={e => e.target.select()}
+            value={total}
+            format={v => v.toFixed(2)}
+            onCommit={onTotalChange}
           />
         </div>
 
@@ -254,21 +282,21 @@ export default function BudgetEditor({ budgets: externalBudgets, onSave }) {
               <div style={s.catInputs}>
                 <div style={s.inputField(false)}>
                   <span style={s.inputPrefix}>€</span>
-                  <input
+                  <NumberField
                     style={s.input}
                     type="number" step="0.01" min="0"
-                    value={val.toFixed(2)}
-                    onChange={e => onAmountChange(cat, e.target.value)}
-                    onFocus={e => e.target.select()}
+                    value={val}
+                    format={v => v.toFixed(2)}
+                    onCommit={v => onAmountChange(cat, v)}
                   />
                 </div>
                 <div style={s.inputField(true)}>
-                  <input
+                  <NumberField
                     style={s.input}
                     type="number" step="1" min="0" max="100"
-                    value={pct.toFixed(0)}
-                    onChange={e => onPctChange(cat, e.target.value)}
-                    onFocus={e => e.target.select()}
+                    value={pct}
+                    format={v => v.toFixed(0)}
+                    onCommit={v => onPctChange(cat, v)}
                   />
                   <span style={s.inputPrefix}>%</span>
                 </div>
