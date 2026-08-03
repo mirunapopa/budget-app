@@ -99,7 +99,7 @@ function QuickAdd({ onAdd, loading }) {
 function HomeView({ stats }) {
   if (!stats) return <div className="loading-state">Loading...</div>;
 
-  const { todayTotal, todayTx, categoryStats, totalMonthly, totalSpent, daysRemaining, dayOfMonth, daysInMonth } = stats;
+  const { todayTotal, recentTx, categoryStats, totalMonthly, totalSpent, daysRemaining, dayOfMonth, daysInMonth } = stats;
 
   const totalDailyAtStart = totalMonthly / daysInMonth;
   const totalLeft = totalMonthly - totalSpent;
@@ -193,10 +193,10 @@ function HomeView({ stats }) {
       {/* Per category — collapsible, with on-track badges */}
       <CollapsibleCatList categoryStats={categoryStats} daysRemaining={daysRemaining} />
 
-      {todayTx.length > 0 && (
+      {recentTx.length > 0 && (
         <div className="card">
-          <div className="card-title">logged today</div>
-          {todayTx.map((tx, i) => (
+          <div className="card-title">recent transactions</div>
+          {recentTx.map((tx, i) => (
             <div key={i} className="tx-row">
               <span className="tx-cat" style={{ color: CAT_COLORS[tx.category] }}>{tx.category}</span>
               <span className="tx-desc">{tx.description || '—'}</span>
@@ -205,7 +205,7 @@ function HomeView({ stats }) {
           ))}
         </div>
       )}
-      {todayTx.length === 0 && <div className="empty-state">Nothing logged yet today</div>}
+      {recentTx.length === 0 && <div className="empty-state">Nothing logged yet</div>}
     </div>
   );
 }

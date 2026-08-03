@@ -29,6 +29,12 @@ export function useBudgetStats(transactions, budgets, type = 'Personal') {
     const todayTx = monthTx.filter(tx => tx.date === todayStr);
     const todayTotal = todayTx.reduce((s, tx) => s + tx.amount, 0);
 
+    // Last 5 logged transactions (any day), most recent first
+    const recentTx = transactions
+      .filter(tx => tx.type === type)
+      .slice(-5)
+      .reverse();
+
     // Per-category stats
     const categories = Object.keys(budgetMap);
     const categoryStats = categories.map(cat => {
@@ -64,6 +70,7 @@ export function useBudgetStats(transactions, budgets, type = 'Personal') {
     return {
       todayTotal,
       todayTx,
+      recentTx,
       categoryStats,
       totalMonthly,
       totalSpent,
