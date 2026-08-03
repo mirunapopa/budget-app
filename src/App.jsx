@@ -28,6 +28,11 @@ const LogoutIcon = () => (
   </svg>
 );
 
+// Google API errors come back as { result: { error: { message } } }, not a plain Error
+function getErrorMessage(e) {
+  return e?.result?.error?.message || e?.message || (typeof e === 'string' ? e : 'Unknown error');
+}
+
 const CAT_COLORS = {
   Groceries: '#4ade80',
   Outings:   '#fb923c',
@@ -301,7 +306,7 @@ export default function App() {
     try {
       const [b, tx] = await Promise.all([fetchBudgets(), fetchTransactions()]);
       setBudgets(b); setTransactions(tx);
-    } catch (e) { setError('Failed to load data: ' + e.message); }
+    } catch (e) { setError('Failed to load data: ' + getErrorMessage(e)); }
     finally { setDataLoading(false); }
   }, []);
 
@@ -309,7 +314,7 @@ export default function App() {
 
   const handleSignIn = async () => {
     try { await signIn(); setSignedIn(true); }
-    catch (e) { setError('Sign in failed.'); }
+    catch (e) { setError('Sign in failed: ' + getErrorMessage(e)); }
   };
 
   const handleSignOut = () => {
@@ -319,7 +324,7 @@ export default function App() {
   const handleAdd = async (data) => {
     setAddLoading(true);
     try { await appendTransaction(data); await loadData(); setTab('home'); }
-    catch (e) { setError('Failed to save: ' + e.message); }
+    catch (e) { setError('Failed to save: ' + getErrorMessage(e)); }
     finally { setAddLoading(false); }
   };
 
