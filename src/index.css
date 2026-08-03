@@ -325,26 +325,6 @@ body {
   gap: 8px;
 }
 
-/* ─── Home category rows ─────────────────────────────────────────────────────── */
-.home-cat-row {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.home-cat-row:last-child { border-bottom: none; }
-
-.home-cat-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.home-cat-name { font-weight: 600; font-size: 13px; }
-.home-cat-remaining { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
-
-
-
 /* ─── Cards ───────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--surface);
@@ -376,26 +356,6 @@ body {
 .tx-desc { flex: 1; color: var(--text-muted); }
 .tx-amount { font-family: var(--mono); font-weight: 500; }
 
-/* ─── Month view ─────────────────────────────────────────────────────────────── */
-.overall-card { margin-bottom: 16px; }
-
-.overall-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 14px;
-}
-
-.overall-spent {
-  font-family: var(--mono);
-  font-size: 28px;
-  font-weight: 500;
-}
-
-.overall-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.overall-right { text-align: right; }
-.days-left { font-size: 20px; font-weight: 600; color: var(--accent); }
-
 .progress-bar-wrap {
   height: 6px;
   background: var(--surface2);
@@ -410,7 +370,6 @@ body {
   transition: width 0.4s ease;
 }
 
-.progress-bar-fill.overall { background: var(--accent2); }
 .progress-bar-fill.over    { background: var(--danger) !important; }
 
 .cat-list { display: flex; flex-direction: column; gap: 12px; }
