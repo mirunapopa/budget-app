@@ -198,6 +198,12 @@ function HomeView({ stats }) {
       {/* Per category — collapsible, with on-track badges */}
       <CollapsibleCatList categoryStats={categoryStats} daysRemaining={daysRemaining} />
 
+      <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 16px' }}>
+        <span style={{ fontFamily: 'var(--mono)', color: totalLeft < 0 ? 'var(--danger)' : 'var(--text)' }}>
+          €{Math.abs(totalLeft).toFixed(2)}
+        </span> {totalLeft < 0 ? 'over budget' : 'left this month'} · {daysRemaining}d left
+      </div>
+
       {recentTx.length > 0 && (
         <div className="card">
           <div className="card-title">recent transactions</div>
